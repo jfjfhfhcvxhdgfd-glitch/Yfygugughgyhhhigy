@@ -52,7 +52,6 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          # PowerShell parser hatasını önlemek için değişkeni ayırdık
           $pass = $env:RDP_PASSWORD
           $securePassword = ConvertTo-SecureString $pass -AsPlainText -Force
 
