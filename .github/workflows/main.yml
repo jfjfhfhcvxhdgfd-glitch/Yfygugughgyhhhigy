@@ -196,7 +196,7 @@ jobs:
             throw "Tailscale IPv4 adresi alınamadı."
           }
 
-          "RDP_IP=$ip" \vert{} Out-File -FilePath $env:GITHUB_ENV -Append
+          Out-File -InputObject "RDP_IP=$ip" -FilePath $env:GITHUB_ENV -Append
           Write-Host "Tailscale bağlantısı hazır."
           Write-Host "RDP IP: $ip"
           Write-Host "Kullanıcı adı: Draghyper"
