@@ -43,25 +43,43 @@ jobs:
         RDP_PASS: ${{ secrets.RDP_PASSWORD }}
       run: |
         $username = "Draghyper"
-        $password = ConvertTo-SecureString $env:RDP_PASS -AsPlainText -Force
-        New-LocalUser -Name $username -Password $password -FullName "Draghyper Admin" -Description "Remote User"
-        Add-LocalGroupMember -Group "Administrators" -Member $username
+        $pass =$env:RDP_PASS
+        if ([string]::IsNullOrEmpty($pass)) {$pass = "Draghyper2026!"
+            Write-Host "Uyarı: RDP_PASSWORD secret bulunamadı. Varsayılan şifre kullanılıyor: Draghyper2026!" -ForegroundColor Yellow
+        }
+        $password = ConvertTo-SecureString$pass -AsPlainText -Force
+        
+        $existingUser = Get-LocalUser -Name$username -ErrorAction SilentlyContinue
+        if ($null -eq$existingUser) {
+            New-LocalUser -Name $username -Password$password -FullName "Draghyper Admin" -Description "Remote User"
+            Add-LocalGroupMember -Group "Administrators" -Member $username
+            Write-Host "Kullanıcı başarıyla oluşturuldu."
+        } else {
+            Set-LocalUser -Name $username -Password$password
+            Write-Host "Kullanıcı zaten mevcut, şifre güncellendi."
+        }
 
-    - name: Connect to Tailscale VPN
-      uses: tailscale/github-action@v2
-      with:
-        authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-        version: latest
+    - name: Install and Connect Tailscale (Native Windows Method)
+      env:
+        TS_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+      run: |
+        Write-Host "Tailscale MSI indiriliyor..."
+        $msiPath = "$env:TEMP\tailscale-setup.msi"
+        Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-amd64.msi" -OutFile $msiPath
+        
+        Write-Host "Tailscale sessiz kurulumu yapılıyor..."
+        Start-Process msiexec.exe -ArgumentList "/i `"$msiPath`" /quiet /qn /norestart" -Wait
+        
+        Write-Host "Tailnet ağına bağlanılıyor..."
+        $tailscalePath = "C:\Program Files\Tailscale\tailscale.exe"
+        & $tailscalePath up --authkey="$env:TS_AUTHKEY" --accept-dns=false
+        Write-Host "Tailscale başarıyla bağlandı!"
 
     - name: Keep-Alive & Auto-Restart Loop (Bypass 6-Hour Limit)
       run: |
         Write-Host "Environment is running. Monitoring time..."
         $duration = 345
-        for ($i = 1; $i -le $duration; $i++) {
-            Start-Sleep -Seconds 60
-        }
-        
-        $headers = @{
+        for ($i = 1; $i -le$duration; $i++) {             Start-Sleep -Seconds 60         }$headers = @{
             "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}"
             "Accept" = "application/vnd.github.v3+json"
         }
@@ -69,6 +87,5 @@ jobs:
             ref = "${{ github.ref_name }}"
         } | ConvertTo-Json
 
-        Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/dispatches" -Method Post -Headers $headers -Body $body
+        Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/dispatches" -Method Post -Headers $headers -Body$body
         Write-Host "Auto-restart workflow triggered successfully!"
-        
