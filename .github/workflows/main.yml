@@ -25,8 +25,10 @@ jobs:
             throw "RDP_PASSWORD secret eksik."
           }
           if ($env:RDP_PASSWORD.Length -lt 12 -or
-              $env:RDP_PASSWORD -notmatch '[A-Z]' -or$env:RDP_PASSWORD -notmatch '[a-z]' -or
-              $env:RDP_PASSWORD -notmatch '\d' -or$env:RDP_PASSWORD -notmatch '[^a-zA-Z0-9]') {
+              $env:RDP_PASSWORD -notmatch '[A-Z]' -or
+              $env:RDP_PASSWORD -notmatch '[a-z]' -or
+              $env:RDP_PASSWORD -notmatch '\d' -or
+              $env:RDP_PASSWORD -notmatch '[^a-zA-Z0-9]') {
             throw "RDP_PASSWORD en az 12 karakter; büyük harf, küçük harf, rakam ve sembol içermeli."
           }
           if ([string]::IsNullOrWhiteSpace($env:TAILSCALE_AUTH_KEY)) {
@@ -48,14 +50,15 @@ jobs:
         env:
           RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
         run: |
-          # Güncellenmiş RDP yapılandırması
           $ErrorActionPreference = "Stop"
 
-          $securePassword = ConvertTo-SecureString$env:RDP_PASSWORD -AsPlainText -Force
+          # PowerShell parser hatasını önlemek için değişkeni ayırdık
+          $pass = $env:RDP_PASSWORD
+          $securePassword = ConvertTo-SecureString $pass -AsPlainText -Force
 
           $user = Get-LocalUser -Name "Draghyper" -ErrorAction SilentlyContinue
 
-          if ($null -eq$user) {
+          if ($null -eq $user) {
             New-LocalUser -Name "Draghyper" `
               -Password $securePassword `
               -Description "RDP account" | Out-Null
@@ -222,7 +225,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Aktif tutma ve yeniden başlatma döngüsü
           Write-Host "RDP oturumu ve ses/mikrofon ortamı aktif. 345 dakika boyunca izleniyor..."
           $duration = 345
           for ($i = 1; $i -le $duration; $i++) {
